@@ -13,6 +13,7 @@
             justify-content: center;
             height: 100vh;
             margin: 0;
+            overflow: hidden; /* Ngăn xuất hiện thanh cuộn trong iFrame */
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background-color: #f3f4f6;
         }
@@ -102,7 +103,7 @@
 <body>
 
     <div class="container">
-        <h2>Điều khiển Đèn</h2>
+        <h2>Cài đặt hệ thống</h2>
         
         <label class="switch">
           <input type="checkbox" id="mySwitch">
@@ -112,10 +113,11 @@
         <div class="status-text" id="status">Trạng thái: TẮT</div>
     </div>
 
-    <!-- Tích hợp logic để giao tiếp với hệ sinh thái E-Ra -->
-    <script type="module">
-        import { ERAWidget } from "https://unpkg.com/@eohjsc/era-widget@1.1.3/src/index.js";
+    <!-- Nhúng thư viện E-Ra Widget trực tiếp (Khắc phục lỗi Module Iframe) -->
+    <script src="https://unpkg.com/@eohjsc/era-widget@1.1.3/src/index.js"></script>
 
+    <!-- Tích hợp logic để giao tiếp với hệ sinh thái E-Ra -->
+    <script>
         const toggleSwitch = document.getElementById('mySwitch');
         const statusText = document.getElementById('status');
 
@@ -137,14 +139,17 @@
         // Lắng nghe cấu hình và giá trị đồng bộ từ ứng dụng E-Ra
         eraWidget.init({
             onConfiguration: (configuration) => {
-                // Nhận Action ID (chân ảo) được cấu hình trên Dashboard
+                console.log("✅ Đã nhận cấu hình từ E-Ra Dashboard:", configuration);
                 widgetConfig = configuration;
             },
             onValues: (values) => {
+                console.log("📥 Đã nhận giá trị cập nhật:", values);
                 // Nếu ứng dụng trên điện thoại gửi giá trị thay đổi thì đồng bộ trên web
                 if (widgetConfig && widgetConfig.actions && widgetConfig.actions.length > 0) {
                     const actionId = widgetConfig.actions[0].action;
-                    if (values[actionId]) {
+                    
+                    // Kiểm tra an toàn xem id hành động có dữ liệu trả về không
+                    if (values[actionId] !== undefined && values[actionId] !== null) {
                         const state = values[actionId].value;
                         toggleSwitch.checked = (state === 1);
                         updateStatusUI(state === 1);
@@ -163,8 +168,11 @@
                 const actionId = widgetConfig.actions[0].action;
                 const valueToSend = isChecked ? 1 : 0;
                 
+                console.log(`📤 Gửi lệnh (${valueToSend}) lên hệ thống...`);
                 // Hàm gửi data đi
                 eraWidget.triggerAction(actionId, null, [{ value: valueToSend }]);
+            } else {
+                console.warn("⚠️ Widget chưa được cấu hình 'Action'. Vui lòng chọn chân (Ví dụ: V0) trong phần cài đặt của Iframe Widget trên Dashboard.");
             }
         });
     </script>
