@@ -2,8 +2,12 @@
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Giao diện Công tắc E-Ra</title>
+    
+    <!-- Thư viện E-Ra Widget (Giống phiên bản của Joystick) -->
+    <script src="https://www.unpkg.com/@eohjsc/era-widget@1.1.6/src/index.js"></script>
+    
     <style>
         /* Căn giữa toàn bộ nội dung trên màn hình */
         body {
@@ -16,6 +20,8 @@
             overflow: hidden; /* Ngăn xuất hiện thanh cuộn trong iFrame */
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background-color: #f3f4f6;
+            user-select: none;
+            touch-action: none;
         }
 
         /* Khung chứa giao diện */
@@ -113,18 +119,14 @@
         <div class="status-text" id="status">Trạng thái: TẮT</div>
     </div>
 
-    <!-- Tích hợp logic giao tiếp với E-Ra (Bắt buộc dùng type="module") -->
-    <script type="module">
-        // ĐÃ SỬA LỖI Ở ĐÂY: Bỏ dấu ngoặc nhọn {} để dùng Default Export
-        import ERAWidget from "https://unpkg.com/@eohjsc/era-widget@1.1.3/src/index.js";
+    <!-- Tích hợp logic giao tiếp với E-Ra giống hệt Joystick -->
+    <script>
+        // Khởi tạo đối tượng E-Ra Widget (Lưu ý: EraWidget thay vì ERAWidget)
+        const eraWidget = new EraWidget();
+        let config = null;
 
-        // Khởi tạo các phần tử DOM
         const toggleSwitch = document.getElementById('mySwitch');
         const statusText = document.getElementById('status');
-
-        // Khởi tạo đối tượng E-Ra
-        const eraWidget = new ERAWidget();
-        let currentActionId = null;
 
         // Hàm cập nhật giao diện web
         function updateStatusUI(isChecked) {
@@ -138,37 +140,40 @@
             }
         }
 
-        // Lắng nghe dữ liệu từ Dashboard
+        // Khởi tạo kết nối với E-Ra
         eraWidget.init({
             onConfiguration: (configuration) => {
-                console.log("✅ Đã nhận cấu hình:", configuration);
-                // Lưu lại Action ID (Chân ảo V0/V1) được cấu hình trên Dashboard
-                if (configuration && configuration.actions && configuration.actions.length > 0) {
-                    currentActionId = configuration.actions[0].action;
-                }
+                config = configuration;
+                console.log('✅ Đã nạp Cấu hình E-Ra:', config);
             },
             onValues: (values) => {
                 console.log("📥 Đã nhận giá trị cập nhật:", values);
-                // Nếu điện thoại hoặc ESP32 gửi trạng thái lên, cập nhật lại web
-                if (currentActionId && values[currentActionId] !== undefined) {
-                    const state = values[currentActionId].value;
-                    updateStatusUI(state === 1);
+                // Đồng bộ trạng thái nếu nhận được dữ liệu từ Server/App E-Ra
+                if (config && config.actions && config.actions.length > 0) {
+                    const actionId = config.actions[0].action;
+                    if (values[actionId] !== undefined) {
+                        const state = values[actionId].value;
+                        updateStatusUI(state === 1);
+                    }
                 }
             }
         });
 
-        // Lắng nghe người dùng gạt công tắc
+        // Bắt sự kiện khi Click/Touch vào công tắc
         toggleSwitch.addEventListener('change', function() {
             const isChecked = this.checked;
             updateStatusUI(isChecked);
 
-            if (currentActionId) {
+            // Gửi dữ liệu lên E-Ra
+            if (config && config.actions && config.actions.length > 0) {
                 const valueToSend = isChecked ? 1 : 0;
-                console.log(`📤 Gửi lệnh (${valueToSend}) lên Action ID: ${currentActionId}`);
-                // Bắn tín hiệu về Server E-Ra (từ đó truyền xuống ESP32)
-                eraWidget.triggerAction(currentActionId, null, [{ value: valueToSend }]);
+                
+                // Cú pháp chuẩn của SDK giống hệt file Joystick: triggerAction(action_id, alias, { value: dữ_liệu })
+                eraWidget.triggerAction(config.actions[0].action, 1, { value: valueToSend });
+                
+                console.log("📤 Đã gửi Data: ", valueToSend);
             } else {
-                console.warn("⚠️ Chưa thể gửi tín hiệu: IFrame chưa được cấu hình Action trên Dashboard E-Ra.");
+                console.error("LỖI: Chưa cấu hình Action trên E-Ra Dashboard.");
             }
         });
     </script>
