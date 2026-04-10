@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Giao diện Công tắc</title>
+    <style>
+        /* Căn giữa toàn bộ nội dung trên màn hình */
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f3f4f6;
+        }
+
+        /* Khung chứa giao diện */
+        .container {
+            background: white;
+            padding: 40px 60px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+
+        h2 {
+            margin-top: 0;
+            margin-bottom: 24px;
+            color: #333;
+        }
+
+        /* --- BẮT ĐẦU CSS CỦA CÔNG TẮC --- */
+        /* Container chứa toàn bộ công tắc */
+        .switch {
+          position: relative;
+          display: inline-block;
+          width: 60px;
+          height: 34px;
+        }
+
+        /* Ẩn ô checkbox mặc định của trình duyệt */
+        .switch input {
+          opacity: 0;
+          width: 0;
+          height: 0;
+        }
+
+        /* Phần nền của công tắc (khi ở trạng thái TẮT) */
+        .slider {
+          position: absolute;
+          cursor: pointer;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background-color: #ccc;
+          transition: 0.4s;
+        }
+
+        /* Nút tròn bên trong công tắc */
+        .slider:before {
+          position: absolute;
+          content: "";
+          height: 26px;
+          width: 26px;
+          left: 4px;
+          bottom: 4px;
+          background-color: white;
+          transition: 0.4s;
+          box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+
+        /* Đổi màu nền khi công tắc ở trạng thái BẬT (checked) */
+        input:checked + .slider {
+          background-color: #4CAF50; /* Màu xanh lá */
+        }
+
+        /* Hiệu ứng viền khi focus (dùng phím tab) */
+        input:focus + .slider {
+          box-shadow: 0 0 1px #4CAF50;
+        }
+
+        /* Di chuyển nút tròn sang phải 26px khi BẬT */
+        input:checked + .slider:before {
+          transform: translateX(26px);
+        }
+
+        /* Làm tròn các góc để tạo hình viên thuốc */
+        .slider.round {
+          border-radius: 34px;
+        }
+
+        .slider.round:before {
+          border-radius: 50%;
+        }
+        /* --- KẾT THÚC CSS CỦA CÔNG TẮC --- */
+
+        /* Kiểu chữ cho trạng thái */
+        .status-text {
+            margin-top: 20px;
+            font-size: 18px;
+            font-weight: 600;
+            color: #888;
+            transition: color 0.3s;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h2>Cài đặt hệ thống</h2>
+        
+        <!-- Phần tử công tắc -->
+        <label class="switch">
+          <input type="checkbox" id="mySwitch">
+          <span class="slider round"></span>
+        </label>
+        
+        <!-- Đoạn văn bản hiển thị trạng thái -->
+        <div class="status-text" id="status">Trạng thái: TẮT</div>
+    </div>
+
+    <script>
+        // Lấy các phần tử từ DOM
+        const toggleSwitch = document.getElementById('mySwitch');
+        const statusText = document.getElementById('status');
+
+        // Lắng nghe sự kiện thay đổi trạng thái của công tắc
+        toggleSwitch.addEventListener('change', function() {
+            if (this.checked) {
+                // Khi bật
+                statusText.textContent = 'Trạng thái: BẬT';
+                statusText.style.color = '#4CAF50'; // Chữ màu xanh
+            } else {
+                // Khi tắt
+                statusText.textContent = 'Trạng thái: TẮT';
+                statusText.style.color = '#888'; // Chữ màu xám
+            }
+        });
+    </script>
+
+</body>
+</html>
