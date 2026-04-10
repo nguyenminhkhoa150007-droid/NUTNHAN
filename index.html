@@ -113,20 +113,22 @@
         <div class="status-text" id="status">Trạng thái: TẮT</div>
     </div>
 
-    <!-- Nhúng thư viện E-Ra Widget trực tiếp (Khắc phục lỗi Module Iframe) -->
-    <script src="https://unpkg.com/@eohjsc/era-widget@1.1.3/src/index.js"></script>
+    <!-- Tích hợp logic giao tiếp với E-Ra (Bắt buộc dùng type="module") -->
+    <script type="module">
+        // 1. Nạp class ERAWidget trực tiếp từ thư viện qua dạng ES Module
+        import { ERAWidget } from "https://unpkg.com/@eohjsc/era-widget@1.1.3/src/index.js";
 
-    <!-- Tích hợp logic để giao tiếp với hệ sinh thái E-Ra -->
-    <script>
+        // 2. Khởi tạo các phần tử DOM
         const toggleSwitch = document.getElementById('mySwitch');
         const statusText = document.getElementById('status');
 
-        // Khởi tạo đối tượng E-Ra Widget
+        // 3. Khởi tạo đối tượng E-Ra
         const eraWidget = new ERAWidget();
-        let widgetConfig = null;
+        let currentActionId = null;
 
-        // Cập nhật giao diện Trạng thái
+        // Hàm cập nhật giao diện web
         function updateStatusUI(isChecked) {
+            toggleSwitch.checked = isChecked;
             if (isChecked) {
                 statusText.textContent = 'Trạng thái: BẬT';
                 statusText.style.color = '#4CAF50';
@@ -136,43 +138,37 @@
             }
         }
 
-        // Lắng nghe cấu hình và giá trị đồng bộ từ ứng dụng E-Ra
+        // 4. Lắng nghe dữ liệu từ Dashboard
         eraWidget.init({
             onConfiguration: (configuration) => {
-                console.log("✅ Đã nhận cấu hình từ E-Ra Dashboard:", configuration);
-                widgetConfig = configuration;
+                console.log("✅ Đã nhận cấu hình:", configuration);
+                // Lưu lại Action ID (Chân ảo V0/V1) được cấu hình trên Dashboard
+                if (configuration && configuration.actions && configuration.actions.length > 0) {
+                    currentActionId = configuration.actions[0].action;
+                }
             },
             onValues: (values) => {
                 console.log("📥 Đã nhận giá trị cập nhật:", values);
-                // Nếu ứng dụng trên điện thoại gửi giá trị thay đổi thì đồng bộ trên web
-                if (widgetConfig && widgetConfig.actions && widgetConfig.actions.length > 0) {
-                    const actionId = widgetConfig.actions[0].action;
-                    
-                    // Kiểm tra an toàn xem id hành động có dữ liệu trả về không
-                    if (values[actionId] !== undefined && values[actionId] !== null) {
-                        const state = values[actionId].value;
-                        toggleSwitch.checked = (state === 1);
-                        updateStatusUI(state === 1);
-                    }
+                // Nếu điện thoại hoặc ESP32 gửi trạng thái lên, cập nhật lại web
+                if (currentActionId && values[currentActionId] !== undefined) {
+                    const state = values[currentActionId].value;
+                    updateStatusUI(state === 1);
                 }
             }
         });
 
-        // Lắng nghe sự kiện người dùng Click vào công tắc trên Web
+        // 5. Lắng nghe người dùng gạt công tắc
         toggleSwitch.addEventListener('change', function() {
             const isChecked = this.checked;
             updateStatusUI(isChecked);
 
-            // Gửi dữ liệu đi tới ESP32 (Thông qua E-Ra Widget ID Action)
-            if (widgetConfig && widgetConfig.actions && widgetConfig.actions.length > 0) {
-                const actionId = widgetConfig.actions[0].action;
+            if (currentActionId) {
                 const valueToSend = isChecked ? 1 : 0;
-                
-                console.log(`📤 Gửi lệnh (${valueToSend}) lên hệ thống...`);
-                // Hàm gửi data đi
-                eraWidget.triggerAction(actionId, null, [{ value: valueToSend }]);
+                console.log(`📤 Gửi lệnh (${valueToSend}) lên Action ID: ${currentActionId}`);
+                // Bắn tín hiệu về Server E-Ra (từ đó truyền xuống ESP32)
+                eraWidget.triggerAction(currentActionId, null, [{ value: valueToSend }]);
             } else {
-                console.warn("⚠️ Widget chưa được cấu hình 'Action'. Vui lòng chọn chân (Ví dụ: V0) trong phần cài đặt của Iframe Widget trên Dashboard.");
+                console.warn("⚠️ Chưa thể gửi tín hiệu: IFrame chưa được cấu hình Action trên Dashboard E-Ra.");
             }
         });
     </script>
